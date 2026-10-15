@@ -1,1 +1,1 @@
-{"alerts":[{"name":"CP_a101_wcFoldbackActive","audiences":["Customer","Service"],"startedAt":"2026-10-15T00:14:55.164Z","endedAt":null}],"createdAt":"2026-10-15T00:15:05.180915260Z","vin":"TESTVIN0000000001"}
+{"vin":"TESTVIN0000000001","createdAt":"2026-10-15T00:15:05.180915260Z","alerts":[{"name":"CP_a101_wcFoldbackActive","audiences":["Customer","Service"],"startedAt":"2026-10-15T00:14:55.164Z","endedAt":null}]}

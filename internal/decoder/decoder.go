@@ -105,10 +105,13 @@ func (d *Decoder) Decode(dst []byte, subject string, payload []byte) ([]byte, er
 		return dst, fmt.Errorf("cannot decode %s payload: %w", recordType, err)
 	}
 	fillVIN(message, subject)
-	if payload, ok := message.(*protos.Payload); ok && d.format == FormatFlat {
+	if d.format == FormatProtoJSON {
+		return d.appendProtoJSON(dst, message)
+	}
+	if payload, ok := message.(*protos.Payload); ok {
 		return d.appendFlatPayload(dst, payload)
 	}
-	return d.appendProtoJSON(dst, message)
+	return d.appendIdentityFirst(dst, message)
 }
 
 // fillVIN sets the VIN from the subject (telemetry.<VIN>.<type>) when the
@@ -133,6 +136,58 @@ func (d *Decoder) appendProtoJSON(dst []byte, message proto.Message) ([]byte, er
 		return dst, err
 	}
 	return appendCompact(dst, &d.scratch, b)
+}
+
+// appendIdentityFirst appends the message in the protobuf JSON mapping with vin
+// and createdAt as its first fields. Alerts and errors list them after a long
+// array (alert events reach 16 KB), past the point where Splunk stops extracting
+// fields at search time.
+func (d *Decoder) appendIdentityFirst(dst []byte, message proto.Message) ([]byte, error) {
+	b, err := d.json.Marshal(message)
+	if err != nil {
+		return dst, err
+	}
+	type member struct {
+		key   string
+		value json.RawMessage
+	}
+	var members []member
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if _, err := dec.Token(); err != nil { // {
+		return dst, err
+	}
+	for dec.More() {
+		key, err := dec.Token()
+		if err != nil {
+			return dst, err
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			return dst, err
+		}
+		members = append(members, member{key.(string), value})
+	}
+	ordered := make([]byte, 0, len(b))
+	ordered = append(ordered, '{')
+	write := func(m member) {
+		if len(ordered) > 1 {
+			ordered = append(ordered, ',')
+		}
+		ordered = append(appendKey(ordered, m.key), m.value...)
+	}
+	for _, first := range []string{d.names.vin, d.names.createdAt} {
+		for _, m := range members {
+			if m.key == first {
+				write(m)
+			}
+		}
+	}
+	for _, m := range members {
+		if m.key != d.names.vin && m.key != d.names.createdAt {
+			write(m)
+		}
+	}
+	return appendCompact(dst, &d.scratch, append(ordered, '}'))
 }
 
 func appendCompact(dst []byte, scratch *bytes.Buffer, b []byte) ([]byte, error) {

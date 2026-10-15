@@ -154,19 +154,19 @@ func TestRecordTypes(t *testing.T) {
 		want    string
 	}{
 		{"telemetry.V.alerts", &protos.VehicleAlerts{Alerts: []*protos.VehicleAlert{{Name: "A", Audiences: []protos.Audience{protos.Audience_Customer}}}},
-			`{"alerts":[{"name":"A","audiences":["Customer"],"startedAt":null,"endedAt":null}],"createdAt":null,"vin":"V"}`},
+			`{"vin":"V","createdAt":null,"alerts":[{"name":"A","audiences":["Customer"],"startedAt":null,"endedAt":null}]}`},
 		{"telemetry.V.errors", &protos.VehicleErrors{Errors: []*protos.VehicleError{{Name: "E", Tags: map[string]string{"k": "v"}}}},
-			`{"errors":[{"createdAt":null,"name":"E","tags":{"k":"v"},"body":""}],"createdAt":null,"vin":"V"}`},
+			`{"vin":"V","createdAt":null,"errors":[{"createdAt":null,"name":"E","tags":{"k":"v"},"body":""}]}`},
 		{"telemetry.V.connectivity", &protos.VehicleConnectivity{Status: protos.ConnectivityEvent_CONNECTED, NetworkInterface: "wifi"},
-			`{"vin":"V","connectionId":"","status":"CONNECTED","createdAt":null,"networkInterface":"wifi"}`},
+			`{"vin":"V","createdAt":null,"connectionId":"","status":"CONNECTED","networkInterface":"wifi"}`},
 		{"telemetry.V.metrics", &protos.VehicleMetrics{Metrics: []*protos.Metric{{Name: "m", Value: 1.5}}},
-			`{"metrics":[{"name":"m","tags":{},"value":1.5}],"createdAt":null,"vin":"V"}`},
+			`{"vin":"V","createdAt":null,"metrics":[{"name":"m","tags":{},"value":1.5}]}`},
 		// The VIN in the message wins over the subject
 		{"telemetry.OTHER.connectivity", &protos.VehicleConnectivity{Vin: "V", Status: protos.ConnectivityEvent_DISCONNECTED},
-			`{"vin":"V","connectionId":"","status":"DISCONNECTED","createdAt":null,"networkInterface":""}`},
+			`{"vin":"V","createdAt":null,"connectionId":"","status":"DISCONNECTED","networkInterface":""}`},
 		// No VIN anywhere
 		{"connectivity", &protos.VehicleConnectivity{Status: protos.ConnectivityEvent_DISCONNECTED},
-			`{"vin":"","connectionId":"","status":"DISCONNECTED","createdAt":null,"networkInterface":""}`},
+			`{"vin":"","createdAt":null,"connectionId":"","status":"DISCONNECTED","networkInterface":""}`},
 	} {
 		if got := decode(t, d, tc.subject, tc.message); got != tc.want {
 			t.Errorf("%s:\ngot  %s\nwant %s", tc.subject, got, tc.want)

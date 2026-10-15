@@ -42,7 +42,7 @@ func run(t *testing.T, input string) (out []string, diag string) {
 
 func TestProtocol(t *testing.T) {
 	good := request("telemetry.V.connectivity", connectivityPayload(t))
-	wantGood := `{"vin":"V","connectionId":"","status":"CONNECTED","createdAt":null,"networkInterface":""}`
+	wantGood := `{"vin":"V","createdAt":null,"connectionId":"","status":"CONNECTED","networkInterface":""}`
 	for _, tc := range []struct {
 		name     string
 		request  string

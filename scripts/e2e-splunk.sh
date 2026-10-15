@@ -84,6 +84,10 @@ echo "indexed for $(($(date +%s) - start))s"
 
 echo "-- events by record type and sourcetype (nats:json = decoded, nats:message = base64 fallback)"
 search 'search index=telemetry | eval type=mvindex(split(source, "."), -1) | stats count by type sourcetype'
+echo "-- vin and createdAt extracted from every event"
+search 'search index=telemetry | eval type=mvindex(split(source, "."), -1)
+  | stats count as events count(vin) as vin count(createdAt) as createdAt by type'
+missing=$(search 'search index=telemetry | where isnull(vin) OR isnull(createdAt) | stats count' | tail -1)
 echo "-- data: events carrying common signals"
 search 'search index=telemetry sourcetype=nats:json source=*.data
   | stats count as events count(vin) as vin count(createdAt) as createdAt count(VehicleSpeed) as VehicleSpeed
@@ -101,6 +105,6 @@ search 'search index=telemetry sourcetype=nats:json source=*.errors | stats coun
 failed_events=$(search 'search index=telemetry sourcetype!=nats:json | stats count' | tail -1)
 failed_log=$(search 'search index=_internal sourcetype=splunkd "failed to decode" | stats count' | tail -1)
 total=$(search 'search index=telemetry | stats count' | tail -1)
-echo "== $total events, $failed_events not decoded, $failed_log decode failures logged"
-[ "$total" -gt 0 ] && [ "$failed_events" = 0 ] && [ "$failed_log" = 0 ]
+echo "== $total events, $failed_events not decoded, $failed_log decode failures logged, $missing without vin or createdAt"
+[ "$total" -gt 0 ] && [ "$failed_events" = 0 ] && [ "$failed_log" = 0 ] && [ "$missing" = 0 ]
 echo PASS

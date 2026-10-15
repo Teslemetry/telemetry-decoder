@@ -49,7 +49,7 @@ Set these as the input's **Decoder Arguments** (or `decoder_args=` on
 | Argument | Default | Effect |
 |---|---|---|
 | `-format flat` | yes | Vehicle data has one top-level field per signal (see below). |
-| `-format protojson` | | Vehicle data is the protobuf JSON mapping, the same JSON fleet-telemetry writes with `transmit_decoded_records`: `"data":[{"key":"VehicleSpeed","value":{"floatValue":28.6}}]`. |
+| `-format protojson` | | Vehicle data is the protobuf JSON mapping, the same JSON fleet-telemetry writes with `transmit_decoded_records`, for every record type: fields in proto order, and vehicle data as `"data":[{"key":"VehicleSpeed","value":{"floatValue":28.6}}]`. |
 | `-proto-names` | | Proto field names (`created_at`, `network_interface`, `is_resend`) instead of the JSON names (`createdAt`, `networkInterface`, `isResend`). |
 | `-version` | | Prints the version and the tesla-protocol commit, then exits. |
 
@@ -58,8 +58,10 @@ Set these as the input's **Decoder Arguments** (or `decoder_args=` on
 Every event is one line of JSON. Field names follow the protobuf JSON mapping,
 as fleet-telemetry's own JSON output does (lowerCamel, enums by name, timestamps
 in RFC 3339 UTC), and every field is present even when unset (`null`, `false`,
-`0`, `""`), so an alert without `endedAt` is visibly still active. The VIN comes
-from the message, or from the subject when the message has none.
+`0`, `""`), so an alert without `endedAt` is visibly still active. Every event
+starts with `vin` and `createdAt`, so Splunk extracts them even from large alert
+events. The VIN comes from the message, or from the subject when the message has
+none.
 
 **Vehicle data** (`telemetry.<VIN>.data`), with the default `-format flat`:
 
@@ -80,23 +82,23 @@ from the message, or from the subject when the message has none.
 **Alerts** (`telemetry.<VIN>.alerts`):
 
 ```json
-{"alerts":[{"name":"CP_a101_wcFoldbackActive","audiences":["Customer","Service"],"startedAt":"2026-10-15T00:14:55.164Z","endedAt":null}],"createdAt":"2026-10-15T00:15:05.180915260Z","vin":"TESTVIN0000000001"}
+{"vin":"TESTVIN0000000001","createdAt":"2026-10-15T00:15:05.180915260Z","alerts":[{"name":"CP_a101_wcFoldbackActive","audiences":["Customer","Service"],"startedAt":"2026-10-15T00:14:55.164Z","endedAt":null}]}
 ```
 
 **Errors** (`telemetry.<VIN>.errors`):
 
 ```json
-{"errors":[{"createdAt":"2026-10-14T23:45:04.404614863Z","name":"unsupported_field","tags":{"field_name":"LifetimeEnergyGainedRegen"},"body":""}],"createdAt":"2026-10-15T00:10:12.617991348Z","vin":"TESTVIN0000000001"}
+{"vin":"TESTVIN0000000001","createdAt":"2026-10-15T00:10:12.617991348Z","errors":[{"createdAt":"2026-10-14T23:45:04.404614863Z","name":"unsupported_field","tags":{"field_name":"LifetimeEnergyGainedRegen"},"body":""}]}
 ```
 
 **Connectivity** (`telemetry.<VIN>.connectivity`):
 
 ```json
-{"vin":"TESTVIN0000000001","connectionId":"00000000-0000-4000-8000-000000000001","status":"CONNECTED","createdAt":"2026-10-15T00:13:22.426862796Z","networkInterface":"wifi"}
+{"vin":"TESTVIN0000000001","createdAt":"2026-10-15T00:13:22.426862796Z","connectionId":"00000000-0000-4000-8000-000000000001","status":"CONNECTED","networkInterface":"wifi"}
 ```
 
 **Metrics** (`telemetry.<VIN>.metrics`) follow the same mapping:
-`{"metrics":[{"name":...,"tags":{...},"value":...}],"createdAt":...,"vin":...}`.
+`{"vin":...,"createdAt":...,"metrics":[{"name":...,"tags":{...},"value":...}]}`.
 
 Example searches (with an input indexing into `index=nats`):
 
